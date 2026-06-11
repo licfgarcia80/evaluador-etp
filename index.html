@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Evaluador Curricular ETP — INET San Juan</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/dist/tabler-icons.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #ffffff;
+      --bg2:      #f5f5f4;
+      --bg3:      #edebe8;
+      --txt:      #1a1917;
+      --txt2:     #6b6966;
+      --txt3:     #a09e9b;
+      --bord:     rgba(0,0,0,.12);
+      --bord2:    rgba(0,0,0,.22);
+      --navy:     #1f3864;
+      --green:    #1e6c3c;
+      --red:      #9b1c1c;
+      --amber:    #7b4f00;
+      --blue:     #185fa5;
+      --bg-ok:    #d4edda; --txt-ok:  #1e6c3c; --bord-ok:  #a3cfb4;
+      --bg-err:   #fce8e8; --txt-err: #9b1c1c; --bord-err: #f5c1c1;
+      --bg-warn:  #fff3cd; --txt-warn:#7b4f00; --bord-warn:#f0d070;
+      --bg-info:  #e6f1fb; --txt-info:#185fa5; --bord-info:#b5d4f4;
+      --r-md: 8px; --r-lg: 12px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:      #1c1b19; --bg2:  #252420; --bg3:  #2e2c29;
+        --txt:     #f0ede8; --txt2: #a09e9b; --txt3: #6b6966;
+        --bord:    rgba(255,255,255,.12); --bord2: rgba(255,255,255,.22);
+        --bg-ok:   #0d3320; --txt-ok:  #6fcf97; --bord-ok:  #1e6c3c;
+        --bg-err:  #3b1010; --txt-err: #f09595; --bord-err: #9b1c1c;
+        --bg-warn: #2e2000; --txt-warn:#fac775; --bord-warn:#7b4f00;
+        --bg-info: #0a1e35; --txt-info:#85b7eb; --bord-info:#185fa5;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg3);
+      color: var(--txt);
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--bg);
+      border-bottom: .5px solid var(--bord);
+      padding: .75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-icon {
+      width: 34px; height: 34px; border-radius: var(--r-md);
+      background: var(--navy); display: flex; align-items: center; justify-content: center;
+    }
+    .logo-icon i { color: #fff; font-size: 18px; }
+    .logo-text { font-size: 15px; font-weight: 500; color: var(--txt); }
+    .logo-sub  { font-size: 12px; color: var(--txt3); }
+    .version-badge {
+      font-size: 11px; background: var(--bg-info); color: var(--txt-info);
+      padding: 3px 10px; border-radius: 99px; border: .5px solid var(--bord-info);
+    }
+
+    /* ── LAYOUT ── */
+    .layout { display: grid; grid-template-columns: 240px 1fr; min-height: calc(100vh - 53px); }
+    @media (max-width: 700px) { .layout { grid-template-columns: 1fr; } }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      background: var(--bg);
+      border-right: .5px solid var(--bord);
+      padding: 1rem 0;
+    }
+    .nav-section { padding: 0 .75rem; margin-bottom: .5rem; }
+    .nav-label { font-size: 11px; font-weight: 500; color: var(--txt3); text-transform: uppercase; letter-spacing: .06em; padding: .25rem .5rem .5rem; }
+    .nav-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: .5rem .75rem; border-radius: var(--r-md);
+      cursor: pointer; font-size: 14px; color: var(--txt2);
+      transition: background .15s; border: none; background: none; width: 100%; text-align: left;
+    }
+    .nav-item:hover { background: var(--bg2); color: var(--txt); }
+    .nav-item.active { background: var(--bg2); color: var(--txt); font-weight: 500; }
+    .nav-item i { font-size: 16px; flex-shrink: 0; }
+    .nav-divider { height: .5px; background: var(--bord); margin: .5rem .75rem; }
+
+    /* ── MAIN ── */
+    .main { padding: 1.5rem; max-width: 780px; }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--bg);
+      border: .5px solid var(--bord);
+      border-radius: var(--r-lg);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .sec-label { font-size: 11px; font-weight: 500; color: var(--txt3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+    .page-title { font-size: 20px; font-weight: 500; color: var(--txt); margin-bottom: 4px; }
+    .page-sub { font-size: 13px; color: var(--txt2); margin-bottom: 1.25rem; }
+
+    /* ── FORMS ── */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { font-size: 13px; color: var(--txt2); display: block; margin-bottom: 4px; }
+    input[type=text], select, textarea {
+      width: 100%; font-size: 14px; padding: 8px 12px;
+      border: .5px solid var(--bord2); border-radius: var(--r-md);
+      background: var(--bg); color: var(--txt); font-family: inherit;
+      transition: border-color .15s;
+    }
+    input[type=text]:focus, select:focus, textarea:focus { outline: none; border-color: var(--navy); }
+    textarea { min-height: 130px; resize: vertical; }
+
+    /* ── UPLOAD ── */
+    .upload-zone {
+      border: 1.5px dashed var(--bord2); border-radius: var(--r-lg);
+      padding: 2rem 1rem; text-align: center; cursor: pointer;
+      transition: background .15s; margin-bottom: 1rem;
+    }
+    .upload-zone:hover { background: var(--bg2); }
+    .upload-zone i { font-size: 28px; color: var(--txt3); display: block; margin-bottom: 8px; }
+    .upload-zone p  { font-size: 14px; color: var(--txt2); }
+    .upload-zone small { font-size: 12px; color: var(--txt3); }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; font-size: 14px; font-family: inherit;
+      border: .5px solid var(--bord2); border-radius: var(--r-md);
+      cursor: pointer; background: var(--bg); color: var(--txt);
+      transition: background .15s;
+    }
+    .btn:hover { background: var(--bg2); }
+    .btn:active { transform: scale(.98); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+    .btn-primary { background: var(--navy); color: #fff; border-color: var(--navy); }
+    .btn-primary:hover { opacity: .88; background: var(--navy); }
+    .action-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* ── STEP BAR ── */
+    .step-bar { display: flex; align-items: center; gap: 6px; margin-bottom: 1.25rem; }
+    .step { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--txt3); }
+    .step.active { color: var(--txt); font-weight: 500; }
+    .step.done   { color: var(--txt-ok); }
+    .sdot {
+      width: 20px; height: 20px; border-radius: 50%;
+      border: .5px solid var(--bord2); display: flex; align-items: center;
+      justify-content: center; font-size: 10px; background: var(--bg); flex-shrink: 0;
+    }
+    .step.active .sdot { background: var(--navy); color: #fff; border-color: var(--navy); }
+    .step.done   .sdot { background: var(--bg-ok); border-color: var(--bord-ok); color: var(--txt-ok); }
+    .ssep { flex: 1; height: .5px; background: var(--bord); min-width: 16px; }
+
+    /* ── ALERT CARDS ── */
+    .ic { border-radius: var(--r-md); padding: 10px 14px; margin-bottom: 10px; border: .5px solid; }
+    .ic.ok   { border-color: var(--bord-ok);   background: var(--bg-ok);   }
+    .ic.err  { border-color: var(--bord-err);  background: var(--bg-err);  }
+    .ic.warn { border-color: var(--bord-warn); background: var(--bg-warn); }
+    .ic.info { border-color: var(--bord-info); background: var(--bg-info); }
+    .it { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+    .it.ok   { color: var(--txt-ok);   }
+    .it.err  { color: var(--txt-err);  }
+    .it.warn { color: var(--txt-warn); }
+    .it.info { color: var(--txt-info); }
+    .ib { font-size: 12px; color: var(--txt2); line-height: 1.6; }
+
+    /* ── DIMS / BARS ── */
+    .dim-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: .5px solid var(--bord); }
+    .dim-row:last-child { border-bottom: none; }
+    .dim-name { font-size: 13px; flex: 1; color: var(--txt); }
+    .bar-wrap { flex: 2; height: 6px; background: var(--bg2); border-radius: 99px; overflow: hidden; }
+    .bar { height: 100%; border-radius: 99px; transition: width .5s ease; }
+    .dim-score { font-size: 12px; color: var(--txt2); min-width: 34px; text-align: right; }
+
+    /* ── STATS ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 1rem; }
+    .stat-card { background: var(--bg2); border-radius: var(--r-md); padding: .75rem 1rem; text-align: center; }
+    .stat-num  { font-size: 22px; font-weight: 500; color: var(--txt); }
+    .stat-lbl  { font-size: 12px; color: var(--txt2); margin-top: 2px; }
+
+    /* ── MISC ── */
+    .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 4px 10px; background: var(--bg2); border: .5px solid var(--bord); border-radius: var(--r-md); margin: 4px 4px 4px 0; }
+    .badge { font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 500; display: inline-block; }
+    .b-sys   { background: var(--bg-info); color: var(--txt-info); }
+    .b-prov  { background: var(--bg-warn); color: var(--txt-warn); }
+    .b-custom{ background: var(--bg-ok);   color: var(--txt-ok);   }
+    .norm-tag { font-size: 11px; background: var(--bg2); color: var(--txt2); padding: 2px 8px; border-radius: 99px; border: .5px solid var(--bord); display: inline-block; margin-top: 4px; }
+    .corr-block { border-left: 3px solid var(--bord-info); padding: 6px 10px; margin-top: 6px; background: var(--bg-info); border-radius: 0 var(--r-md) var(--r-md) 0; font-size: 12px; color: var(--txt-info); line-height: 1.6; }
+    .divider { height: .5px; background: var(--bord); margin: 1rem 0; }
+    .check-item { font-size: 12px; padding: 4px 0; border-bottom: .5px solid var(--bord); display: flex; gap: 6px; align-items: flex-start; line-height: 1.5; }
+    .check-item:last-child { border-bottom: none; }
+    .check-item i { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+    .marco-row { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: .5px solid var(--bord); }
+    .marco-row:last-child { border-bottom: none; }
+    .spinner { width: 16px; height: 16px; border: 2px solid var(--bord); border-top-color: var(--navy); border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-row { display: flex; align-items: center; gap: 10px; padding: 1.5rem 0; color: var(--txt2); font-size: 14px; }
+    .placeholder { padding: 2.5rem 0; text-align: center; color: var(--txt3); }
+    .placeholder i { font-size: 40px; display: block; margin-bottom: 10px; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem; }
+    .hidden { display: none; }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center; padding: 1.5rem; font-size: 12px;
+      color: var(--txt3); border-top: .5px solid var(--bord);
+      background: var(--bg);
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon"><i class="ti ti-school"></i></div>
+    <div>
+      <div class="logo-text">Evaluador Curricular ETP</div>
+      <div class="logo-sub">INET · Ministerio de Educación · San Juan</div>
+    </div>
+  </div>
+  <span class="version-badge">v3 · corpus completo</span>
+</header>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-label">Evaluación</div>
+      <button class="nav-item active" id="nav-cargar" onclick="showPage('cargar')">
+        <i class="ti ti-file-upload"></i> Cargar proyecto
+      </button>
+      <button class="nav-item" id="nav-resultados" onclick="showPage('resultados')">
+        <i class="ti ti-chart-bar"></i> Resultados
+      </button>
+      <button class="nav-item" id="nav-correcciones" onclick="showPage('correcciones')">
+        <i class="ti ti-edit"></i> Correcciones
+      </button>
+    </div>
+    <div class="nav-divider"></div>
+    <div class="nav-section">
+      <div class="nav-label">Referencia</div>
+      <button class="nav-item" id="nav-marcos" onclick="showPage('marcos')">
+        <i class="ti ti-book"></i> Marcos normativos
+      </button>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- ── PAGE: CARGAR ── -->
+    <div id="page-cargar">
+      <p class="page-title">Cargar proyecto curricular</p>
+      <p class="page-sub">Ley 26.058 · Res. CFE 261/06 · 47/08 · 175/12 · 295/16 · Res. 2608-ME San Juan 2021</p>
+
+      <div class="step-bar">
+        <div class="step active" id="s1"><div class="sdot">1</div><span>Cargar</span></div>
+        <div class="ssep"></div>
+        <div class="step" id="s2"><div class="sdot">2</div><span>Validar tipo</span></div>
+        <div class="ssep"></div>
+        <div class="step" id="s3"><div class="sdot">3</div><span>Evaluar</span></div>
+      </div>
+
+      <div class="card">
+        <p class="sec-label">Datos del proyecto</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nombre del proyecto</label>
+            <input type="text" id="proj-nombre" placeholder="Ej: Tecnicatura en Programación" />
+          </div>
+          <div class="form-group">
+            <label>Nivel formativo</label>
+            <select id="proj-nivel">
+              <option value="">Seleccionar...</option>
+              <option>Técnico de nivel superior — diversificación</option>
+              <option>Técnico de nivel superior — especialización</option>
+              <option>Técnico de nivel medio</option>
+              <option>Formación profesional inicial</option>
+              <option>Trayecto de formación profesional</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Sector / familia profesional</label>
+            <select id="proj-sector">
+              <option value="">Seleccionar...</option>
+              <option>Administración y gestión</option>
+              <option>Agraria</option>
+              <option>Construcciones civiles</option>
+              <option>Electrónica y automatización</option>
+              <option>Informática y comunicaciones</option>
+              <option>Mecánica y automotores</option>
+              <option>Salud</option>
+              <option>Textil e indumentaria</option>
+              <option>Turismo y hotelería</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Institución</label>
+            <input type="text" id="proj-inst" placeholder="Nombre de la institución" />
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="sec-label">Contenido del proyecto</p>
+        <div class="upload-zone" onclick="document.getElementById('fi').click()">
+          <i class="ti ti-cloud-upload"></i>
+          <p>Arrastrá o hacé clic para subir el archivo</p>
+          <small>PDF o Word (.docx) — máx. 10 MB</small>
+          <input type="file" id="fi" accept=".pdf,.docx" class="hidden" onchange="handleFile(this)" />
+        </div>
+        <div id="fchip"></div>
+        <p style="font-size:13px;color:var(--txt2);margin-bottom:8px;text-align:center">— o pegá el texto directamente —</p>
+        <textarea id="proj-texto" placeholder="Pegá aquí el texto del proyecto curricular..."></textarea>
+      </div>
+
+      <div class="action-row" style="margin-bottom:1rem">
+        <button class="btn btn-primary" id="btn-eval" onclick="iniciarFlujo()">
+          <i class="ti ti-search"></i> Evaluar proyecto
+        </button>
+        <button class="btn" onclick="limpiar()">
+          <i class="ti ti-trash"></i> Limpiar
+        </button>
+      </div>
+
+      <div id="zona-val"></div>
+    </div>
+
+    <!-- ── PAGE: RESULTADOS ── -->
+    <div id="page-resultados" class="hidden">
+      <p class="page-title">Resultados de la evaluación</p>
+      <p class="page-sub">Análisis por dimensión según corpus normativo completo</p>
+      <div id="res-ph" class="placeholder">
+        <i class="ti ti-file-analytics"></i>
+        <p style="font-size:14px">Evaluá un proyecto para ver los resultados aquí.</p>
+      </div>
+      <div id="res-cont"></div>
+    </div>
+
+    <!-- ── PAGE: CORRECCIONES ── -->
+    <div id="page-correcciones" class="hidden">
+      <p class="page-title">Correcciones sugeridas</p>
+      <p class="page-sub">Ordenadas por prioridad — alta, media y baja</p>
+      <div id="cor-ph" class="placeholder">
+        <i class="ti ti-edit"></i>
+        <p style="font-size:14px">Las correcciones aparecerán tras la evaluación.</p>
+      </div>
+      <div id="cor-cont"></div>
+    </div>
+
+    <!-- ── PAGE: MARCOS ── -->
+    <div id="page-marcos" class="hidden">
+      <p class="page-title">Marcos normativos</p>
+      <p class="page-sub">Corpus completo integrado en el motor de evaluación</p>
+
+      <div class="card">
+        <p class="sec-label">Nacionales — Leyes y Resoluciones CFE</p>
+        <div class="marco-row">
+          <i class="ti ti-file-text" style="color:var(--txt3);margin-top:2px;flex-shrink:0"></i>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:500">Ley N° 26.058 — Educación Técnico Profesional</div>
+            <div style="font-size:12px;color:var(--txt2);margin-top:2px">Arts. 22-26: perfil profesional, cargas horarias mínimas, habilitación profesional y validez nacional.</div>
+          </div>
+          <span class="badge b-sys">Sistema</span>
+        </div>
+        <div class="marco-row">
+          <i class="ti ti-file-text" style="color:var(--txt3);margin-top:2px;flex-shrink:0"></i>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:500">Res. CFCyE N° 261/06 — Proceso de homologación</div>
+            <div style="font-size:12px;color:var(--txt2);margin-top:2px">Norma fundacional del sistema. Lineamientos para marcos de referencia y homologación de títulos ETP.</div>
+          </div>
+          <span class="badge b-sys">Sistema</span>
+        </div>
+        <div class="marco-row">
+          <i class="ti ti-file-text" style="color:var(--txt3);margin-top:2px;flex-shrink:0"></i>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:500">Res. CFE N° 47/08 — Lineamientos curriculares ETP</div>
+            <div style="font-size:12px;color:var(--txt2);margin-top:2px">Organización institucional y curricular. Formación general, científico-tecnológica y técnica específica.</div>
+          </div>
+          <span class="badge b-sys">Sistema</span>
+        </div>
+        <div class="marco-row">
+          <i class="ti ti-file-text" style="color:var(--txt3);margin-top:2px;flex-shrink:0"></i>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:500">Res. CFE N° 175/12 — Marcos de referencia sectoriales</div>
+            <div style="font-size:12px;color:var(--txt2);margin-top:2px">Incorpora entornos formativos y Estructura Curricular de la Trayectoria Formativa al proceso de homologación.</div>
+          </div>
+          <span class="badge b-sys">Sistema</span>
+        </div>
+        <div class="marco-row">
+          <i class="ti ti-file-text" style="color:var(--txt3);margin-top:2px;flex-shrink:0"></i>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:500">Res. CFE N° 295/16 — ETP nivel superior</div>
+            <div style="font-size:12px;color:var(--txt2);margin-top:2px">Carga mínima: 1400 hs reloj (diversificada) / 1000 hs (especializada). PP ≥ 33% de la carga total. 4 campos de formación. Perfil profesional con amplitud, complejidad y pertinencia.</div>
+          </div>
+          <span class="badge b-sys">Sistema</span>
+        </div>
+        <div class="marco-row">
+          <i class="ti ti-file-text" style="color:var(--txt3);margin-top:2px;flex-shrink:0"></i>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:500">RM N° 451/22 — Validez nacional</div>
+            <div style="font-size:12px;color:var(--txt2);margin-top:2px">Manual de procedimiento y componentes para la validez nacional de títulos ETP.</div>
+          </div>
+          <span class="badge b-sys">Sistema</span>
+        </div>
+        <div class="marco-row">
+          <i class="ti ti-file-text" style="color:var(--txt3);margin-top:2px;flex-shrink:0"></i>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:500">Catálogo Nacional de Títulos y Certificaciones</div>
+            <div style="font-size:12px;color:var(--txt2);margin-top:2px">Denominaciones homologadas, campos de actividad y perfiles profesionales reconocidos.</div>
+          </div>
+          <span class="badge b-sys">Sistema</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="sec-label">Jurisdiccionales — San Juan</p>
+        <div class="marco-row">
+          <i class="ti ti-map-pin" style="color:var(--txt3);margin-top:2px;flex-shrink:0"></i>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:500">Res. N° 2608-ME — San Juan (2021)</div>
+            <div style="font-size:12px;color:var(--txt2);margin-top:4px;line-height:1.6">
+              <strong>Anexo I:</strong> Circuito administrativo para presentación de DCJ. Formato Word 97-2003, Decreto Regl. N° 0011-2018.<br>
+              <strong>Anexo II:</strong> Cada espacio curricular debe incluir: denominación, formato pedagógico, despliegue, carga horaria hs/cátedra, introducción con finalidades formativas (máx. 3-4), contenidos por ejes con descriptores, bibliografía (máx. 10 años, APA, 6-10 autores).<br>
+              <strong>Anexo III:</strong> Ficha Técnica — Informe Técnico-Pedagógico de la Dirección Técnica Pedagógica.
+            </div>
+          </div>
+          <span class="badge b-prov">Provincial</span>
+        </div>
+      </div>
+
+      <p class="sec-label" style="margin-top:.5rem">Agregar marco adicional</p>
+      <div class="card">
+        <div class="form-group">
+          <label>Nombre del documento</label>
+          <input type="text" id="mn" placeholder="Ej: Res. CFE 458/23 — Marco Salud" />
+        </div>
+        <div class="form-group">
+          <label>Descripción / criterios clave</label>
+          <textarea id="md" style="min-height:80px" placeholder="Criterios que establece este marco..."></textarea>
+        </div>
+        <button class="btn" onclick="addMarco()"><i class="ti ti-plus"></i> Agregar</button>
+      </div>
+      <div id="marcos-extra"></div>
+    </div>
+
+  </main>
+</div>
+
+<footer>
+  Evaluador Curricular ETP · Ministerio de Educación de San Juan · Desarrollado con INET
+</footer>
+
+<script>
+  /* ═══════════════════════════════════════════════
+     ESTADO
+  ═══════════════════════════════════════════════ */
+  let b64 = '', evActual = null;
+  const API = '/api/chat'; // → Netlify function (servidor)
+
+  /* ═══════════════════════════════════════════════
+     NAVEGACIÓN
+  ═══════════════════════════════════════════════ */
+  function showPage(name) {
+    ['cargar','resultados','correcciones','marcos'].forEach(p => {
+      document.getElementById('page-' + p).classList.toggle('hidden', p !== name);
+      document.getElementById('nav-' + p).classList.toggle('active', p === name);
+    });
+  }
+
+  /* ═══════════════════════════════════════════════
+     PASOS
+  ═══════════════════════════════════════════════ */
+  function setStep(n) {
+    [1, 2, 3].forEach(i => {
+      const el = document.getElementById('s' + i);
+      el.classList.remove('active', 'done');
+      const dot = el.querySelector('.sdot');
+      if (i < n)       { el.classList.add('done');   dot.innerHTML = '<i class="ti ti-check" style="font-size:10px"></i>'; }
+      else if (i === n){ el.classList.add('active'); dot.textContent = i; }
+      else             { dot.textContent = i; }
+    });
+  }
+
+  /* ═══════════════════════════════════════════════
+     ARCHIVO
+  ═══════════════════════════════════════════════ */
+  function handleFile(inp) {
+    const f = inp.files[0];
+    if (!f) return;
+    document.getElementById('fchip').innerHTML =
+      `<span class="chip"><i class="ti ti-file-text"></i>${f.name}</span>`;
+    const r = new FileReader();
+    r.onload = e => { b64 = e.target.result.split(',')[1]; };
+    r.readAsDataURL(f);
+  }
+
+  /* ═══════════════════════════════════════════════
+     LIMPIAR
+  ═══════════════════════════════════════════════ */
+  function limpiar() {
+    ['proj-nombre','proj-nivel','proj-sector','proj-inst','proj-texto']
+      .forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('fchip').innerHTML = '';
+    document.getElementById('zona-val').innerHTML = '';
+    b64 = ''; evActual = null;
+    setStep(1);
+  }
+
+  /* ═══════════════════════════════════════════════
+     MARCOS EXTRA
+  ═══════════════════════════════════════════════ */
+  function addMarco() {
+    const n = document.getElementById('mn').value.trim();
+    const d = document.getElementById('md').value.trim();
+    if (!n) { alert('Ingresá el nombre del marco.'); return; }
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `<div class="marco-row">
+      <i class="ti ti-file-text" style="color:var(--txt3);margin-top:2px;flex-shrink:0"></i>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500">${n}</div>
+        <div style="font-size:12px;color:var(--txt2);margin-top:2px">${d || 'Sin descripción.'}</div>
+      </div>
+      <span class="badge b-custom">Personalizado</span>
+    </div>`;
+    document.getElementById('marcos-extra').appendChild(div);
+    document.getElementById('mn').value = '';
+    document.getElementById('md').value = '';
+  }
+
+  /* ═══════════════════════════════════════════════
+     CORPUS NORMATIVO
+  ═══════════════════════════════════════════════ */
+  function buildNormContext() {
+    const extras = Array.from(document.querySelectorAll('#marcos-extra .card'))
+      .map(c => c.querySelector('[style*="font-weight:500"]')?.textContent || '')
+      .filter(Boolean);
+    return `
+CORPUS NORMATIVO:
+- Ley N° 26.058 Arts. 22-26: perfil profesional, cargas horarias mínimas, habilitación.
+- Res. CFCyE N° 261/06: proceso de homologación (norma fundacional).
+- Res. CFE N° 47/08: lineamientos curriculares y organizacionales ETP secundaria y superior.
+- Res. CFE N° 175/12: entornos formativos y estructura curricular de la trayectoria.
+- Res. CFE N° 295/16 (CLAVE para nivel superior):
+  · Carga mínima: 1400 hs reloj (diversificada) / 1000 hs reloj (especializada).
+  · PP: mínimo 33% de la carga horaria total (Art. 34), distribuidas en todos los años.
+  · 4 campos obligatorios: formación general, fundamento, específica, práctica profesionalizante.
+  · Perfil profesional: amplitud, complejidad y pertinencia ocupacional (Art. 39).
+  · Organización curricular con lógica de complejidad creciente (Art. 47).
+  · Espacios de integración explícitos (proyectos, seminarios, jornadas) (Art. 49).
+- RM N° 451/22: procedimiento de validez nacional.
+- Res. N° 2608-ME San Juan (2021) (CLAVE para jurisdicción):
+  · Anexo I: presentar en Word 97-2003, Decreto Regl. N° 0011-2018.
+  · Anexo II: cada EC debe tener: 1) denominación, 2) formato pedagógico (Asignatura/Seminario/Taller/Proyecto/Laboratorio/Práctica formativa/Práctica profesionalizante), 3) despliegue, 4) carga horaria semanal y total hs/cátedra, 5) introducción con finalidades formativas (máx. 3-4), 6) contenidos por ejes con descriptores, 7) bibliografía APA, máx. 10 años, 6-10 autores.
+  · Estructura curricular: cuadro por año y campo (hs reloj), despliegue, cursado simultáneo.
+${extras.length ? '\nMARCOS ADICIONALES:\n' + extras.map(e => '- ' + e).join('\n') : ''}`.trim();
+  }
+
+  /* ═══════════════════════════════════════════════
+     LLAMADA A LA API (via proxy Netlify)
+  ═══════════════════════════════════════════════ */
+  async function callAPI(messages, max_tokens = 2000) {
+    const body = { model: 'claude-sonnet-4-20250514', max_tokens, messages };
+    const r = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error.message || JSON.stringify(d.error));
+    return d.content.map(i => i.text || '').join('');
+  }
+
+  function buildMessages(prompt) {
+    if (b64) return [{ role: 'user', content: [
+      { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
+      { type: 'text', text: prompt }
+    ]}];
+    return [{ role: 'user', content: prompt }];
+  }
+
+  /* ═══════════════════════════════════════════════
+     FLUJO PRINCIPAL
+  ═══════════════════════════════════════════════ */
+  async function iniciarFlujo() {
+    const texto = document.getElementById('proj-texto').value.trim();
+    if (!texto && !b64) { alert('Subí un archivo o pegá el texto del proyecto.'); return; }
+
+    const btn = document.getElementById('btn-eval');
+    btn.disabled = true;
+    const zona = document.getElementById('zona-val');
+    zona.innerHTML = `<div class="loading-row"><div class="spinner"></div><span>Validando tipo de documento...</span></div>`;
+    setStep(2);
+
+    try {
+      /* ── PASO 2: VALIDACIÓN ── */
+      const vp = `Determiná si este documento es un proyecto curricular de la ETP de Argentina apto para evaluación contra marcos del INET.
+
+APTO: Diseño Curricular Jurisdiccional, plan de estudios ETP, Marco de Referencia sectorial, propuesta curricular con espacios, campos de formación o perfil profesional.
+NO APTO: libro, ensayo, artículo, informe de gestión, texto literario, manual técnico no curricular, etc.
+
+Fragmento: ${texto ? texto.substring(0, 1500) : '[Archivo adjunto]'}
+
+Respondé SOLO con JSON (sin markdown):
+{"es_curriculo":true,"tipo_detectado":"string","confianza":"alta","razon":"string","sugerencia":"string si no es apto"}`;
+
+      const rawVal = await callAPI(buildMessages(vp), 600);
+      const val = JSON.parse(rawVal.replace(/```json|```/g, '').trim());
+
+      if (!val.es_curriculo) {
+        setStep(1);
+        zona.innerHTML = renderNoApto(val);
+        btn.disabled = false;
+        return;
+      }
+
+      /* ── PASO 3: EVALUACIÓN ── */
+      zona.innerHTML = `<div class="loading-row"><div class="spinner"></div><span>Documento validado — evaluando contra corpus normativo completo...</span></div>`;
+      setStep(3);
+      await evaluar(texto);
+
+    } catch (e) {
+      zona.innerHTML = `<div class="ic err"><div class="it err"><i class="ti ti-alert-circle"></i> Error</div><div class="ib">${e.message}</div></div>`;
+      setStep(1);
+    }
+    btn.disabled = false;
+  }
+
+  /* ═══════════════════════════════════════════════
+     RENDER: DOC NO APTO
+  ═══════════════════════════════════════════════ */
+  function renderNoApto(val) {
+    const tipos = [
+      ['ti-school', 'Diseño Curricular Jurisdiccional'],
+      ['ti-list-check', 'Plan de estudios ETP'],
+      ['ti-book', 'Marco de Referencia sectorial'],
+      ['ti-building', 'Proyecto institucional formativo'],
+    ];
+    return `<div class="ic err">
+      <div class="it err"><i class="ti ti-file-x" style="font-size:16px"></i> Documento no válido para evaluación</div>
+      <div class="ib">
+        <strong style="color:var(--txt)">Tipo detectado:</strong> ${val.tipo_detectado}<br>${val.razon}
+        ${val.sugerencia ? `<div style="margin-top:8px;padding:8px 10px;background:var(--bg-warn);border-radius:var(--r-md);color:var(--txt-warn);font-size:12px"><i class="ti ti-bulb"></i> ${val.sugerencia}</div>` : ''}
+        <div style="margin-top:10px;font-size:12px;font-weight:500;color:var(--txt2);margin-bottom:6px">Documentos aceptados:</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          ${tipos.map(([ic, t]) => `<div style="background:var(--bg2);border-radius:var(--r-md);padding:6px 10px;font-size:12px;color:var(--txt2);display:flex;align-items:center;gap:6px"><i class="ti ${ic}" style="font-size:14px;flex-shrink:0"></i>${t}</div>`).join('')}
+        </div>
+      </div></div>`;
+  }
+
+  /* ═══════════════════════════════════════════════
+     EVALUACIÓN COMPLETA
+  ═══════════════════════════════════════════════ */
+  async function evaluar(texto) {
+    const nombre  = document.getElementById('proj-nombre').value.trim();
+    const nivel   = document.getElementById('proj-nivel').value;
+    const sector  = document.getElementById('proj-sector').value;
+    const inst    = document.getElementById('proj-inst').value.trim();
+    const normCtx = buildNormContext();
+
+    const prompt = `Eres un experto evaluador curricular del INET de Argentina.
+
+${normCtx}
+
+PROYECTO — Nombre: ${nombre || 'No especificado'} | Nivel: ${nivel || 'No especificado'} | Sector: ${sector || 'No especificado'} | Institución: ${inst || 'No especificada'}
+Contenido: ${texto ? texto.substring(0, 3500) : '[Archivo adjunto]'}
+
+Evaluá contra TODOS los marcos. Verificá específicamente:
+1. Carga horaria vs mínimos Res. 295/16 (1400 hs reloj diversificada / 1000 especializada)
+2. % PP sobre total (mínimo 33% Art. 34 Res. 295/16), distribuidas en todos los años
+3. 4 campos de formación presentes y correctamente definidos
+4. Perfil profesional con amplitud, complejidad y pertinencia (Art. 39 Res. 295/16)
+5. Cada EC con 7 componentes obligatorios Res. 2608 Anexo II
+6. Bibliografía: máx. 10 años, APA, 6-10 autores (Res. 2608)
+7. Denominación en Catálogo Nacional
+8. Lógica de complejidad creciente (Art. 47 Res. 295/16)
+9. Entorno formativo definido (Res. 175/12)
+
+Respondé SOLO con JSON válido (sin markdown):
+{
+  "veredicto": "APROBADO"|"OBSERVADO"|"RECHAZADO",
+  "puntaje_total": number,
+  "resumen": "2-3 oraciones",
+  "dimensiones": [
+    {"nombre":"Fundamentación y pertinencia","puntaje":number,"estado":"ok"|"warn"|"err","observacion":"string"},
+    {"nombre":"Perfil profesional (amplitud/complejidad/pertinencia)","puntaje":number,"estado":"ok"|"warn"|"err","observacion":"string"},
+    {"nombre":"Organización curricular","puntaje":number,"estado":"ok"|"warn"|"err","observacion":"string"},
+    {"nombre":"Carga horaria (Res. 295/16)","puntaje":number,"estado":"ok"|"warn"|"err","observacion":"string"},
+    {"nombre":"Prácticas profesionalizantes ≥33%","puntaje":number,"estado":"ok"|"warn"|"err","observacion":"string"},
+    {"nombre":"Componentes por espacio (Res. 2608)","puntaje":number,"estado":"ok"|"warn"|"err","observacion":"string"},
+    {"nombre":"Bibliografía y normativa APA","puntaje":number,"estado":"ok"|"warn"|"err","observacion":"string"},
+    {"nombre":"Articulación normativa CFE/INET","puntaje":number,"estado":"ok"|"warn"|"err","observacion":"string"},
+    {"nombre":"Denominación y encuadre formal","puntaje":number,"estado":"ok"|"warn"|"err","observacion":"string"}
+  ],
+  "requisitos_cumplidos": ["string"],
+  "requisitos_incumplidos": ["string"],
+  "correcciones": [
+    {"dimension":"string","problema":"string","correccion_sugerida":"string","norma_referencia":"string","prioridad":"alta"|"media"|"baja"}
+  ],
+  "version_corregida_fragmento": "string"
+}`;
+
+    const raw    = await callAPI(buildMessages(prompt), 2000);
+    const result = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    evActual     = result;
+
+    renderResultados(result, nombre);
+    renderCorrecciones(result);
+
+    document.getElementById('zona-val').innerHTML =
+      `<div class="ic ok"><div class="it ok"><i class="ti ti-circle-check"></i> Evaluación completada</div>
+      <div class="ib">Veredicto: <strong>${result.veredicto}</strong> · ${Math.round(result.puntaje_total)}% de cumplimiento. Navegá a "Resultados" o "Correcciones".</div></div>`;
+
+    showPage('resultados');
+  }
+
+  /* ═══════════════════════════════════════════════
+     RENDER RESULTADOS
+  ═══════════════════════════════════════════════ */
+  function ec(e) { return e === 'ok' ? '#22c55e' : e === 'warn' ? '#f59e0b' : '#ef4444'; }
+
+  function renderResultados(r, nombre) {
+    const vc = r.veredicto === 'APROBADO' ? 'ok' : r.veredicto === 'OBSERVADO' ? 'warn' : 'err';
+    const vi = r.veredicto === 'APROBADO' ? 'ti-circle-check' : r.veredicto === 'OBSERVADO' ? 'ti-alert-triangle' : 'ti-circle-x';
+    const dims = r.dimensiones.map(d =>
+      `<div class="dim-row">
+        <span class="dim-name">${d.nombre}</span>
+        <div class="bar-wrap"><div class="bar" style="width:${Math.round(d.puntaje)}%;background:${ec(d.estado)}"></div></div>
+        <span class="dim-score">${Math.round(d.puntaje)}%</span>
+      </div>`).join('');
+    const cum = (r.requisitos_cumplidos || []).map(x =>
+      `<div class="check-item"><i class="ti ti-check" style="color:var(--txt-ok)"></i><span>${x}</span></div>`).join('');
+    const inc = (r.requisitos_incumplidos || []).map(x =>
+      `<div class="check-item"><i class="ti ti-x" style="color:var(--txt-err)"></i><span>${x}</span></div>`).join('');
+
+    document.getElementById('res-ph').style.display = 'none';
+    document.getElementById('res-cont').innerHTML = `
+      <div class="ic ${vc}" style="margin-bottom:1rem">
+        <div class="it ${vc}"><i class="ti ${vi}" style="font-size:18px"></i> ${r.veredicto} — ${nombre || 'Proyecto curricular'}</div>
+        <div class="ib">${r.resumen}</div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-num">${Math.round(r.puntaje_total)}%</div><div class="stat-lbl">Puntaje total</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:var(--txt-ok)">${(r.requisitos_cumplidos || []).length}</div><div class="stat-lbl">Req. cumplidos</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:var(--txt-err)">${(r.requisitos_incumplidos || []).length}</div><div class="stat-lbl">Req. incumplidos</div></div>
+      </div>
+      <div class="card"><p class="sec-label">Evaluación por dimensión — 9 ejes normativos</p>${dims}</div>
+      <div class="two-col">
+        <div class="card"><p class="sec-label" style="color:var(--txt-ok)">Cumplidos</p>${cum || '<div style="font-size:13px;color:var(--txt3)">Ninguno identificado</div>'}</div>
+        <div class="card"><p class="sec-label" style="color:var(--txt-err)">Incumplidos</p>${inc || '<div style="font-size:13px;color:var(--txt3)">Ninguno identificado</div>'}</div>
+      </div>
+      <div class="action-row">
+        <button class="btn" onclick="showPage('correcciones')"><i class="ti ti-edit"></i> Ver correcciones</button>
+        <button class="btn" onclick="exportar()"><i class="ti ti-download"></i> Exportar informe</button>
+      </div>`;
+  }
+
+  /* ═══════════════════════════════════════════════
+     RENDER CORRECCIONES
+  ═══════════════════════════════════════════════ */
+  function renderCorrecciones(r) {
+    document.getElementById('cor-ph').style.display = 'none';
+    const groups = { alta: [], media: [], baja: [] };
+    (r.correcciones || []).forEach(c => {
+      const p = c.prioridad || 'baja';
+      (groups[p] || groups.baja).push(c);
+    });
+    const cls = { alta: 'err', media: 'warn', baja: 'info' };
+    const lbl = { alta: 'Correcciones críticas', media: 'Correcciones', baja: 'Observaciones' };
+
+    let html = '';
+    ['alta', 'media', 'baja'].forEach(p => {
+      if (!groups[p].length) return;
+      const c = cls[p];
+      html += `<p class="sec-label" style="color:var(--txt-${c === 'err' ? 'err' : c === 'warn' ? 'warn' : 'info'});margin-bottom:8px">${lbl[p]} (${groups[p].length})</p>`;
+      groups[p].forEach(item => {
+        html += `<div class="ic ${c}" style="margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <span style="font-size:11px;background:var(--bg-${c === 'err' ? 'err' : c === 'warn' ? 'warn' : 'info'});color:var(--txt-${c === 'err' ? 'err' : c === 'warn' ? 'warn' : 'info'});padding:2px 8px;border-radius:99px;font-weight:500">${item.dimension}</span>
+            <span class="norm-tag">${item.norma_referencia || ''}</span>
+          </div>
+          <div style="font-size:13px;font-weight:500;color:var(--txt);margin-bottom:3px">Problema detectado</div>
+          <div class="ib" style="margin-bottom:8px">${item.problema}</div>
+          <div style="font-size:13px;font-weight:500;color:var(--txt-ok);margin-bottom:3px"><i class="ti ti-bulb"></i> Corrección sugerida</div>
+          <div class="ib">${item.correccion_sugerida}</div>
+        </div>`;
+      });
+    });
+
+    if (r.version_corregida_fragmento) {
+      html += `<div class="card" style="border-color:var(--bord-info);margin-top:8px">
+        <p class="sec-label" style="color:var(--txt-info)">Fragmento reescrito sugerido</p>
+        <div style="font-size:13px;line-height:1.7;color:var(--txt)">${r.version_corregida_fragmento}</div>
+      </div>`;
+    }
+
+    document.getElementById('cor-cont').innerHTML = html ||
+      '<p style="font-size:14px;color:var(--txt2)">No se identificaron correcciones necesarias.</p>';
+  }
+
+  /* ═══════════════════════════════════════════════
+     EXPORTAR
+  ═══════════════════════════════════════════════ */
+  function exportar() {
+    if (!evActual) return;
+    const r = evActual;
+    const n = document.getElementById('proj-nombre').value || 'Proyecto';
+    const orden = { alta: 0, media: 1, baja: 2 };
+    const corrOrd = (r.correcciones || []).sort((a, b) =>
+      (orden[a.prioridad || 'baja'] || 0) - (orden[b.prioridad || 'baja'] || 0));
+
+    const txt = [
+      'INFORME DE EVALUACIÓN CURRICULAR ETP — INET / v3',
+      '='.repeat(55),
+      `Proyecto:  ${n}`,
+      `Veredicto: ${r.veredicto}`,
+      `Puntaje:   ${Math.round(r.puntaje_total)}%`,
+      `Corpus:    Ley 26.058 · Res. CFE 261/06 · 47/08 · 175/12 · 295/16 · Res. 2608-ME SJ 2021`,
+      '',
+      'RESUMEN',
+      r.resumen,
+      '',
+      'DIMENSIONES (9 ejes)',
+      ...r.dimensiones.map(d => `- ${d.nombre}: ${Math.round(d.puntaje)}% [${d.estado.toUpperCase()}] — ${d.observacion}`),
+      '',
+      'REQUISITOS CUMPLIDOS',
+      ...(r.requisitos_cumplidos || []).map(x => '✓ ' + x),
+      '',
+      'REQUISITOS INCUMPLIDOS',
+      ...(r.requisitos_incumplidos || []).map(x => '✗ ' + x),
+      '',
+      'CORRECCIONES',
+      ...corrOrd.map((c, i) =>
+        `${i + 1}. [${(c.prioridad || 'baja').toUpperCase()}] [${c.dimension}]\n   ${c.problema}\n   → ${c.correccion_sugerida}\n   Norma: ${c.norma_referencia}`),
+    ].join('\n');
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([txt], { type: 'text/plain;charset=utf-8' }));
+    a.download = `informe_${n.replace(/\s+/g, '_')}.txt`;
+    a.click();
+  }
+</script>
+</body>
+</html>
