@@ -589,7 +589,9 @@ ${extras.length ? '\nMARCOS ADICIONALES:\n' + extras.map(e => '- ' + e).join('\n
     return JSON.parse(s);
   }
 
-  async function callAPI(messages, max_tokens = 2000) {
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  async function callAPI(messages, max_tokens = 2000, intento = 1) {
     const body = { model: 'claude-sonnet-4-5', max_tokens, messages };
 
     let r;
@@ -621,6 +623,17 @@ ${extras.length ? '\nMARCOS ADICIONALES:\n' + extras.map(e => '- ' + e).join('\n
 
     if (d.error) {
       const msg = typeof d.error === 'string' ? d.error : (d.error.message || JSON.stringify(d.error));
+      // Si es un rate limit (429 / rate_limit), reintentamos automáticamente.
+      const esRateLimit = /rate limit|rate_limit|429|exceed.*tokens per minute/i.test(msg);
+      if (esRateLimit && intento <= 3) {
+        const espera = intento * 30; // 30s, 60s, 90s
+        const zona = document.getElementById('zona-val');
+        if (zona) {
+          zona.innerHTML = `<div class="loading-row"><div class="spinner"></div><span>Límite de la API alcanzado. Reintentando automáticamente en ${espera} segundos (intento ${intento} de 3)...</span></div>`;
+        }
+        await sleep(espera * 1000);
+        return callAPI(messages, max_tokens, intento + 1);
+      }
       throw new Error(msg);
     }
     if (!d.content || !Array.isArray(d.content)) {
@@ -629,9 +642,33 @@ ${extras.length ? '\nMARCOS ADICIONALES:\n' + extras.map(e => '- ' + e).join('\n
     return d.content.map(i => i.text || '').join('');
   }
 
+  // Mensajes para la EVALUACIÓN: PDF completo + caché activado.
+  // El bloque "document" se marca con cache_control para no recobrar tokens
+  // idénticos si se re-evalúa el mismo proyecto.
   function buildMessages(prompt) {
     if (b64) return [{ role: 'user', content: [
-      { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
+      {
+        type: 'document',
+        source: { type: 'base64', media_type: 'application/pdf', data: b64 },
+        cache_control: { type: 'ephemeral' }
+      },
+      { type: 'text', text: prompt }
+    ]}];
+    return [{ role: 'user', content: prompt }];
+  }
+
+  // Mensajes para la VALIDACIÓN: liviano.
+  // Si hay texto pegado, usa solo un fragmento. Si es PDF, NO lo manda entero:
+  // pide al usuario que el tipo se infiera del nombre + primeras líneas si las hay.
+  // Para PDF, mandamos el documento pero con max_tokens mínimo — el caché hace
+  // que esos tokens queden disponibles para la evaluación siguiente sin recobro.
+  function buildValidationMessages(prompt) {
+    if (b64) return [{ role: 'user', content: [
+      {
+        type: 'document',
+        source: { type: 'base64', media_type: 'application/pdf', data: b64 },
+        cache_control: { type: 'ephemeral' }
+      },
       { type: 'text', text: prompt }
     ]}];
     return [{ role: 'user', content: prompt }];
@@ -662,7 +699,7 @@ Fragmento: ${texto ? texto.substring(0, 1500) : '[Archivo adjunto]'}
 Respondé SOLO con JSON (sin markdown):
 {"es_curriculo":true,"tipo_detectado":"string","confianza":"alta","razon":"string","sugerencia":"string si no es apto"}`;
 
-      const rawVal = await callAPI(buildMessages(vp), 600);
+      const rawVal = await callAPI(buildValidationMessages(vp), 600);
       const val = parseModelJSON(rawVal);
 
       if (!val.es_curriculo) {
@@ -673,7 +710,7 @@ Respondé SOLO con JSON (sin markdown):
       }
 
       /* ── PASO 3: EVALUACIÓN ── */
-      zona.innerHTML = `<div class="loading-row"><div class="spinner"></div><span>Documento validado — evaluando contra corpus normativo completo...</span></div>`;
+      zona.innerHTML = `<div class="loading-row"><div class="spinner"></div><span>Documento validado — evaluando contra corpus normativo completo... (esto puede tardar)</span></div>`;
       setStep(3);
       await evaluar(texto);
 
