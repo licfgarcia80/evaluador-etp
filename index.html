@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Evaluador Curricular ETP — INET San Juan</title>
+  <title>Evaluador Curricular ETP — Lic. Fernando Garcia</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/dist/tabler-icons.min.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -229,7 +229,7 @@
     <div class="logo-icon"><i class="ti ti-school"></i></div>
     <div>
       <div class="logo-text">Evaluador Curricular ETP</div>
-      <div class="logo-sub">INET · Ministerio de Educación · San Juan</div>
+      <div class="logo-sub">Desarrollado por Lic. Fernando Garcia</div>
     </div>
   </div>
   <span class="version-badge">v3 · corpus completo</span>
@@ -465,7 +465,7 @@
 </div>
 
 <footer>
-  Evaluador Curricular ETP · Ministerio de Educación de San Juan · Desarrollado con INET
+  Evaluador Curricular ETP · Desarrollado por Lic. Fernando Garcia
 </footer>
 
 <script>
@@ -585,7 +585,14 @@ ${extras.length ? '\nMARCOS ADICIONALES:\n' + extras.map(e => '- ' + e).join('\n
       body: JSON.stringify(body),
     });
     const d = await r.json();
-    if (d.error) throw new Error(d.error.message || JSON.stringify(d.error));
+    // Manejo robusto de errores de la API
+    if (d.error) {
+      const msg = typeof d.error === 'string' ? d.error : (d.error.message || JSON.stringify(d.error));
+      throw new Error(msg);
+    }
+    if (!d.content || !Array.isArray(d.content)) {
+      throw new Error('Respuesta inesperada de la API. Verificá que la API key sea válida y tenga créditos disponibles. Detalle: ' + JSON.stringify(d).substring(0, 200));
+    }
     return d.content.map(i => i.text || '').join('');
   }
 
