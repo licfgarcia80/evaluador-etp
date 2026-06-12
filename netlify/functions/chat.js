@@ -44,6 +44,7 @@ exports.handler = async function (event) {
         "Content-Length": Buffer.byteLength(payload),
         "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
+        "anthropic-beta": "prompt-caching-2024-07-31",
       },
     };
 
