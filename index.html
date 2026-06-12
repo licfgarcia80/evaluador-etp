@@ -577,21 +577,54 @@ ${extras.length ? '\nMARCOS ADICIONALES:\n' + extras.map(e => '- ' + e).join('\n
   /* ═══════════════════════════════════════════════
      LLAMADA A LA API (via proxy Netlify)
   ═══════════════════════════════════════════════ */
+  // Extrae JSON de la respuesta del modelo aunque venga con texto alrededor.
+  function parseModelJSON(raw) {
+    let s = raw.replace(/```json|```/g, '').trim();
+    // Si hay texto antes/después, recortamos desde la primera { hasta la última }
+    const first = s.indexOf('{');
+    const last = s.lastIndexOf('}');
+    if (first > 0 || last < s.length - 1) {
+      if (first >= 0 && last > first) s = s.substring(first, last + 1);
+    }
+    return JSON.parse(s);
+  }
+
   async function callAPI(messages, max_tokens = 2000) {
     const body = { model: 'claude-sonnet-4-5', max_tokens, messages };
-    const r = await fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const d = await r.json();
-    // Manejo robusto de errores de la API
+
+    let r;
+    try {
+      r = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    } catch (netErr) {
+      throw new Error('No se pudo conectar con el servidor. Revisá tu conexión. (' + netErr.message + ')');
+    }
+
+    // Leemos como TEXTO primero — así nunca explota al parsear HTML.
+    const raw = await r.text();
+
+    // Si el servidor devolvió una página HTML de error (empieza con < o <!DOCTYPE)...
+    const trimmed = raw.trim();
+    if (trimmed.startsWith('<')) {
+      throw new Error('El servidor devolvió una página de error (HTTP ' + r.status + '). Suele indicar que la función de Netlify no está desplegada o la API key no está configurada. Reintentá tras el próximo deploy.');
+    }
+
+    let d;
+    try {
+      d = JSON.parse(trimmed);
+    } catch {
+      throw new Error('Respuesta no válida del servidor (HTTP ' + r.status + '): ' + trimmed.substring(0, 160));
+    }
+
     if (d.error) {
       const msg = typeof d.error === 'string' ? d.error : (d.error.message || JSON.stringify(d.error));
       throw new Error(msg);
     }
     if (!d.content || !Array.isArray(d.content)) {
-      throw new Error('Respuesta inesperada de la API. Verificá que la API key sea válida y tenga créditos disponibles. Detalle: ' + JSON.stringify(d).substring(0, 200));
+      throw new Error('Respuesta inesperada de la API. Verificá que la API key sea válida y tenga créditos. Detalle: ' + JSON.stringify(d).substring(0, 200));
     }
     return d.content.map(i => i.text || '').join('');
   }
@@ -630,7 +663,7 @@ Respondé SOLO con JSON (sin markdown):
 {"es_curriculo":true,"tipo_detectado":"string","confianza":"alta","razon":"string","sugerencia":"string si no es apto"}`;
 
       const rawVal = await callAPI(buildMessages(vp), 600);
-      const val = JSON.parse(rawVal.replace(/```json|```/g, '').trim());
+      const val = parseModelJSON(rawVal);
 
       if (!val.es_curriculo) {
         setStep(1);
@@ -726,7 +759,7 @@ Respondé SOLO con JSON válido (sin markdown):
 }`;
 
     const raw    = await callAPI(buildMessages(prompt), 2000);
-    const result = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    const result = parseModelJSON(raw);
     evActual     = result;
 
     renderResultados(result, nombre);
