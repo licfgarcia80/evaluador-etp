@@ -578,7 +578,7 @@ ${extras.length ? '\nMARCOS ADICIONALES:\n' + extras.map(e => '- ' + e).join('\n
      LLAMADA A LA API (via proxy Netlify)
   ═══════════════════════════════════════════════ */
   async function callAPI(messages, max_tokens = 2000) {
-    const body = { model: 'claude-sonnet-4-20250514', max_tokens, messages };
+    const body = { model: 'claude-sonnet-4-5', max_tokens, messages };
     const r = await fetch(API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
